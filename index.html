@@ -87,21 +87,189 @@
     </section>
   </main>
 
+  <script src="https://cdn.trackjs.com/agent/v3/latest/t.js"></script>
   <script>
+    window.TrackJS && TrackJS.install({ 
+      token: "698865ce0ed749b28701aa7232f8b003"
+      // for more configuration options, see https://docs.trackjs.com
+    });
+  </script>
+
+  <script>
+    // Registered first so it catches any uncaught error on the page.
+    // window.onerror receives: message, script URL, line, column, Error object.
+    window.onerror = function (message, source, lineno, colno, error) {
+      console.log('Global error caught by window.onerror:');
+      console.log('  Message:', message);
+      console.log('  Source: ', source);
+      console.log('  Line:   ', lineno, '| Column:', colno);
+      console.log('  Error:  ', error);
+      // Returning true suppresses the browser's default red "Uncaught" entry.
+      // Set to false (or omit) to let it still appear alongside this log.
+      return true;
+    };
+
+    // Extend Error so catch blocks can branch on error type with instanceof.
+    class ValidationError extends Error {
+      constructor(message, field) {
+        super(message);
+        this.name = 'ValidationError';
+        this.field = field; // which input caused the problem
+      }
+    }
+
+    class CalculationError extends Error {
+      constructor(message, operation) {
+        super(message);
+        this.name = 'CalculationError';
+        this.operation = operation; // e.g. "10 / 0"
+      }
+    }
+
+    // ── Calculator (uses custom errors + try/catch/finally) ─────────────────
     let form = document.querySelector('form');
     form.addEventListener('submit', e => {
       e.preventDefault();
-      let output = document.querySelector('output');
-      let firstNum = document.querySelector('#first-num').value;
-      let secondNum = document.querySelector('#second-num').value;
-      let operator = document.querySelector('#operator').value;
-      output.innerHTML = eval(`${firstNum} ${operator} ${secondNum}`);
+      const output = document.querySelector('output');
+      const firstNum = document.querySelector('#first-num').value.trim();
+      const secondNum = document.querySelector('#second-num').value.trim();
+      const operator = document.querySelector('#operator').value;
+
+      try {
+        if (firstNum === '' || secondNum === '') {
+          throw new ValidationError('Both number fields must be filled in.', 'both');
+        }
+        if (isNaN(firstNum) || isNaN(secondNum)) {
+          const badField = isNaN(firstNum) ? 'first-num' : 'second-num';
+          const badValue = isNaN(firstNum) ? firstNum : secondNum;
+          throw new ValidationError(`"${badValue}" is not a valid number.`, badField);
+        }
+        if (operator === '/' && Number(secondNum) === 0) {
+          throw new CalculationError(
+            'Division by zero is not allowed.',
+            `${firstNum} / ${secondNum}`
+          );
+        }
+
+        const result = eval(`${Number(firstNum)} ${operator} ${Number(secondNum)}`);
+        output.textContent = result;
+        console.log(`Calculation: ${firstNum} ${operator} ${secondNum} = ${result}`);
+      } catch (err) {
+        output.textContent = 'Error!';
+        // instanceof lets us handle each custom type differently
+        if (err instanceof ValidationError) {
+          console.error(`${err.name} [field: ${err.field}]: ${err.message}`);
+        } else if (err instanceof CalculationError) {
+          console.error(`${err.name} [operation: "${err.operation}"]: ${err.message}`);
+        } else {
+          console.error(`${err.name}: ${err.message}`);
+        }
+      } finally {
+        console.log('Calculator submission handled — finally block always runs.');
+      }
     });
 
     let errorBtns = Array.from(document.querySelectorAll('#error-btns > button'));
 
     // Start your code here
     // You may move this JS to another file if you wish
+
+    const sampleData = {
+      name: 'Lab 9 Demo',
+      version: 2,
+      active: true,
+      tags: ['console', 'debug', 'javascript']
+    };
+
+    // Console Log
+    errorBtns[0].addEventListener('click', () => {
+      console.log('Console Log Demo:', sampleData);
+    });
+
+    // Console Error
+    errorBtns[1].addEventListener('click', () => {
+      console.error('Console Error Demo: Something went wrong!', { code: 500, message: 'Internal error' });
+    });
+
+    // Console Count
+    errorBtns[2].addEventListener('click', () => {
+      console.count('Button clicks');
+    });
+
+    // Console Warn
+    errorBtns[3].addEventListener('click', () => {
+      console.warn('Console Warn Demo: This action may have side effects.', sampleData);
+    });
+
+    // Console Assert
+    errorBtns[4].addEventListener('click', () => {
+      console.assert(1 === 2, 'Assert Demo: 1 does not equal 2 — assertion failed!');
+      console.assert(1 === 1, 'This message will NOT appear because the assertion passes.');
+    });
+
+    // Console Clear
+    errorBtns[5].addEventListener('click', () => {
+      console.clear();
+    });
+
+    // Console Dir
+    errorBtns[6].addEventListener('click', () => {
+      console.dir(document.querySelector('form'));
+    });
+
+    // Console dirxml
+    errorBtns[7].addEventListener('click', () => {
+      console.dirxml(document.querySelector('form'));
+    });
+
+    // Console Group Start
+    errorBtns[8].addEventListener('click', () => {
+      console.group('Demo Group');
+      console.log('This log is inside the group');
+      console.warn('This warning is inside the group');
+    });
+
+    // Console Group End
+    errorBtns[9].addEventListener('click', () => {
+      console.groupEnd();
+      console.log('Back outside the group');
+    });
+
+    // Console Table
+    errorBtns[10].addEventListener('click', () => {
+      const people = [
+        { name: 'Alice', age: 28, role: 'Engineer' },
+        { name: 'Bob',   age: 34, role: 'Designer' },
+        { name: 'Carol', age: 25, role: 'PM'       }
+      ];
+      console.table(people);
+    });
+
+    // Start Timer
+    errorBtns[11].addEventListener('click', () => {
+      console.time('myTimer');
+      console.log('Timer started — click "End Timer" to stop it.');
+    });
+
+    // End Timer
+    errorBtns[12].addEventListener('click', () => {
+      console.timeEnd('myTimer');
+    });
+
+    // Console Trace
+    errorBtns[13].addEventListener('click', () => {
+      function inner() { console.trace('Console Trace Demo'); }
+      function outer() { inner(); }
+      outer();
+    });
+
+    // Trigger a Global Error
+    // No try/catch here — the TypeError propagates up to window.onerror.
+    // Simulates accessing nested properties on a null API response.
+    errorBtns[14].addEventListener('click', () => {
+      const apiResponse = null;
+      console.log(apiResponse.data.items); // TypeError -> caught by window.onerror
+    });
   </script>
 </body>
 
